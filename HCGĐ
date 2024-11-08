@@ -1,0 +1,849 @@
+// Program.cs
+using System;
+
+namespace PriceGuessingGame
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            try
+            {
+                GameManager gameManager = new GameManager();
+                gameManager.StartGame();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Lỗi khởi động chương trình: {ex.Message}");
+            }
+        }
+    }
+}
+
+// Models/Product.cs
+using System;
+
+namespace PriceGuessingGame.Models
+{
+    [Serializable]
+    public class Product
+    {
+        private string _name;
+        private decimal _price;
+
+        public string Name 
+        { 
+            get { return _name; }
+            set { _name = value; }
+        }
+
+        public decimal Price
+        {
+            get { return _price; }
+            set { _price = value; }
+        }
+
+        public Product() { }
+
+        public Product(string name, decimal price)
+        {
+            _name = name;
+            _price = price;
+        }
+
+        public override string ToString()
+        {
+            return $"{_name} - {_price:N0} VND";
+        }
+    }
+}
+
+// Models/GameLevel.cs
+using System;
+using System.Collections.Generic;
+
+namespace PriceGuessingGame.Models
+{
+    public abstract class GameLevel
+    {
+        protected List<Product> Products;
+        protected int NumberOfProducts;
+        protected string LevelName;
+        protected int MaxAttempts;
+
+        public GameLevel(string levelName, int numberOfProducts, int maxAttempts)
+        {
+            LevelName = levelName;
+            NumberOfProducts = numberOfProducts;
+            MaxAttempts = maxAttempts;
+            Products = new List<Product>();
+        }
+
+        public abstract void Initialize(List<Product> allProducts);
+        public abstract int Play();
+        
+        protected void ShuffleProducts()
+        {
+            Random random = new Random();
+            int n = Products.Count;
+            while (n > 1)
+            {
+                n--;
+                int k = random.Next(n + 1);
+                Product temp = Products[k];
+                Products[k] = Products[n];
+                Products[n] = temp;
+            }
+        }
+    }
+}
+
+// Models/EasyLevel.cs
+using System;
+using System.Collections.Generic;
+
+namespace PriceGuessingGame.Models
+{
+    public class EasyLevel : GameLevel
+    {
+        public EasyLevel() : base("Dễ", 3, 2) { }
+
+        public override void Initialize(List<Product> allProducts)
+        {
+            if (allProducts.Count < NumberOfProducts)
+            {
+                throw new InvalidOperationException("Không đủ sản phẩm để khởi tạo level!");
+            }
+
+            Products.Clear();
+            Random random = new Random();
+            List<int> selectedIndices = new List<int>();
+
+            while (Products.Count < NumberOfProducts)
+            {
+                int index = random.Next(allProducts.Count);
+                if (!selectedIndices.Contains(index))
+                {
+                    selectedIndices.Add(index);
+                    Products.Add(allProducts[index]);
+                }
+            }
+
+            ShuffleProducts();
+        }
+
+        public override int Play()
+        {
+            Console.Clear();
+            Console.WriteLine($"\n=== LEVEL {LevelName.ToUpper()} ===");
+            Console.WriteLine($"Hãy chọn giá đúng cho {NumberOfProducts} sản phẩm sau:");
+            Console.WriteLine($"Bạn có {MaxAttempts} lượt cho mỗi sản phẩm\n");
+
+            int score = 0;
+            List<decimal> prices = Products.ConvertAll(p => p.Price);
+            
+            for (int i = 0; i < Products.Count; i++)
+            {
+                int attempts = 0;
+                bool correct = false;
+                
+                while (attempts < MaxAttempts && !correct)
+                {
+                    Console.WriteLine($"\nSản phẩm {i + 1}: {Products[i].Name}");
+                    Console.WriteLine("Các mức giá (VND):");
+                    
+                    for (int j = 0; j < prices.Count; j++)
+                    {
+                        Console.WriteLine($"{j + 1}. {prices[j]:N0}");
+                    }
+
+                    Console.Write($"\nLượt {attempts + 1}/{MaxAttempts} - Nhập lựa chọn của bạn (1-{prices.Count}): ");
+                    
+                    if (int.TryParse(Console.ReadLine(), out int choice) && choice >= 1 && choice <= prices.Count)
+                    {
+                        if (prices[choice - 1] == Products[i].Price)
+                        {
+                            Console.WriteLine("\nChính xác! +1 điểm");
+                            score++;
+                            correct = true;
+                        }
+                        else
+                        {
+                            Console.WriteLine($"Sai rồi! {(attempts < MaxAttempts - 1 ? "Hãy thử lại!" : $"Giá đúng là: {Products[i].Price:N0} VND")}");
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("Lựa chọn không hợp lệ!");
+                    }
+                    
+                    attempts++;
+                }
+            }
+
+            return score;
+        }
+    }
+}
+
+// Models/MediumLevel.cs
+using System;
+using System.Collections.Generic;
+
+namespace PriceGuessingGame.Models
+{
+    public class MediumLevel : GameLevel
+    {
+        public MediumLevel() : base("Vừa", 5, 2) { }
+
+        public override void Initialize(List<Product> allProducts)
+        {
+            if (allProducts.Count < NumberOfProducts)
+            {
+                throw new InvalidOperationException("Không đủ sản phẩm để khởi tạo level!");
+            }
+
+            Products.Clear();
+            Random random = new Random();
+            List<int> selectedIndices = new List<int>();
+
+            while (Products.Count < NumberOfProducts)
+            {
+                int index = random.Next(allProducts.Count);
+                if (!selectedIndices.Contains(index))
+                {
+                    selectedIndices.Add(index);
+                    Products.Add(allProducts[index]);
+                }
+            }
+
+            ShuffleProducts();
+        }
+
+        public override int Play()
+        {
+            Console.Clear();
+            Console.WriteLine($"\n=== LEVEL {LevelName.ToUpper()} ===");
+            Console.WriteLine($"Hãy chọn giá đúng cho {NumberOfProducts} sản phẩm sau:");
+            Console.WriteLine($"Bạn có {MaxAttempts} lượt cho mỗi sản phẩm\n");
+
+            int score = 0;
+            List<decimal> prices = Products.ConvertAll(p => p.Price);
+            
+            for (int i = 0; i < Products.Count; i++)
+            {
+                int attempts = 0;
+                bool correct = false;
+                
+                while (attempts < MaxAttempts && !correct)
+                {
+                    Console.WriteLine($"\nSản phẩm {i + 1}: {Products[i].Name}");
+                    Console.WriteLine("Các mức giá (VND):");
+                    
+                    for (int j = 0; j < prices.Count; j++)
+                    {
+                        Console.WriteLine($"{j + 1}. {prices[j]:N0}");
+                    }
+
+                    Console.Write($"\nLượt {attempts + 1}/{MaxAttempts} - Nhập lựa chọn của bạn (1-{prices.Count}): ");
+                    
+                    if (int.TryParse(Console.ReadLine(), out int choice) && choice >= 1 && choice <= prices.Count)
+                    {
+                        if (prices[choice - 1] == Products[i].Price)
+                        {
+                            Console.WriteLine("\nChính xác! +1 điểm");
+                            score++;
+                            correct = true;
+                        }
+                        else
+                        {
+                            Console.WriteLine($"Sai rồi! {(attempts < MaxAttempts - 1 ? "Hãy thử lại!" : $"Giá đúng là: {Products[i].Price:N0} VND")}");
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("Lựa chọn không hợp lệ!");
+                    }
+                    
+                    attempts++;
+                }
+            }
+
+            return score;
+        }
+    }
+}
+
+// Models/HardLevel.cs
+using System;
+using System.Collections.Generic;
+
+namespace PriceGuessingGame.Models
+{
+    public class HardLevel : GameLevel
+    {
+        public HardLevel() : base("Khó", 8, 1) { }
+
+        public override void Initialize(List<Product> allProducts)
+        {
+            if (allProducts.Count < NumberOfProducts)
+            {
+                throw new InvalidOperationException("Không đủ sản phẩm để khởi tạo level!");
+            }
+
+            Products.Clear();
+            Random random = new Random();
+            List<int> selectedIndices = new List<int>();
+
+            while (Products.Count < NumberOfProducts)
+            {
+                int index = random.Next(allProducts.Count);
+                if (!selectedIndices.Contains(index))
+                {
+                    selectedIndices.Add(index);
+                    Products.Add(allProducts[index]);
+                }
+            }
+
+            ShuffleProducts();
+        }
+
+        public override int Play()
+        {
+            Console.Clear();
+            Console.WriteLine($"\n=== LEVEL {LevelName.ToUpper()} ===");
+            Console.WriteLine($"Hãy chọn giá đúng cho {NumberOfProducts} sản phẩm sau:");
+            Console.WriteLine($"Bạn chỉ có {MaxAttempts} lượt cho mỗi sản phẩm\n");
+
+            int score = 0;
+            List<decimal> prices = Products.ConvertAll(p => p.Price);
+            
+            for (int i = 0; i < Products.Count; i++)
+            {
+                Console.WriteLine($"\nSản phẩm {i + 1}: {Products[i].Name}");
+                Console.WriteLine("Các mức giá (VND):");
+                
+                for (int j = 0; j < prices.Count; j++)
+                {
+                    Console.WriteLine($"{j + 1}. {prices[j]:N0}");
+                }
+
+                Console.Write($"\nNhập lựa chọn của bạn (1-{prices.Count}): ");
+                
+                if (int.TryParse(Console.ReadLine(), out int choice) && choice >= 1 && choice <= prices.Count)
+                {
+                    if (prices[choice - 1] == Products[i].Price)
+                    {
+                        Console.WriteLine("\nChính xác! +1 điểm");
+                        score++;
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Sai rồi! Giá đúng là: {Products[i].Price:N0} VND");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("Lựa chọn không hợp lệ!");
+                }
+            }
+
+            return score;
+        }
+    }
+}
+
+// Services/IDataService.cs
+using System.Collections.Generic;
+using PriceGuessingGame.Models;
+
+namespace PriceGuessingGame.Services
+{
+    public interface IDataService
+    {
+        List<Product> LoadProducts();
+        void SaveProducts(List<Product> products);
+    }
+}
+
+// Services/FileDataService.cs
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Xml.Serialization;
+using PriceGuessingGame.Models;
+
+namespace PriceGuessingGame.Services
+{
+    public class FileDataService : IDataService
+    {
+        private readonly string _txtPath = "sanpham.txt";
+        private readonly string _xmlPath = "sanpham.xml";
+
+        public List<Product> LoadProducts()
+        {
+            if (!File.Exists(_xmlPath))
+            {
+                List<Product> products = LoadFromTextFile();
+                SaveProducts(products);
+                return products;
+            }
+
+            XmlSerializer serializer = new XmlSerializer(typeof(List<Product>));
+            using (FileStream fs = new FileStream(_xmlPath, FileMode.Open))
+            {
+                return (List<Product>)serializer.Deserialize(fs);
+            }
+        }
+
+        public void SaveProducts(List<Product> products)
+        {
+            XmlSerializer serializer = new XmlSerializer(typeof(List<Product>));
+            using (FileStream fs = new FileStream(_xmlPath, FileMode.Create))
+            {
+                serializer.Serialize(fs, products);
+            }
+        }
+
+        private List<Product> LoadFromTextFile()
+        {
+            if (!File.Exists(_txtPath))
+            {
+                throw new FileNotFoundException($"Không tìm thấy file {_txtPath}!");
+            }
+
+            List<Product> products = new List<Product>();
+            string[] lines = File.ReadAllLines(_txtPath);
+
+            foreach (string line in lines)
+            {
+                string[] parts = line.Split(',');
+                if (parts.Length == 2)
+                {
+                    string name = parts[0].Trim();
+                    if (decimal.TryParse(parts[1].Trim(), out decimal price))
+                    {
+                        products.Add(new Product(name, price));
+                    }
+                }
+            }
+
+            if (products.Count == 0)
+            {
+                throw new Exception($"Không có dữ liệu hợp lệ trong file {_txtPath}!");
+            }
+
+            return products;
+        }
+    }
+}
+
+// Services/IGameService.cs
+using PriceGuessingGame.Models;
+
+namespace PriceGuessingGame.Services
+{
+    public interface IGameService
+    {
+        void PlayGame(GameLevel level);
+    }
+}
+
+// Services/GameService.cs
+using System;
+using System.Collections.Generic;
+using PriceGuessingGame.Models;
+
+namespace PriceGuessingGame.Services
+{
+    public class GameService : IGameService
+    {
+        private readonly IDataService _dataService;
+        private readonly IScoreManager _scoreManager;
+
+        public GameService(IDataService dataService, IScoreManager scoreManager)
+        {
+            _dataService = dataService;
+            _scoreManager = scoreManager;
+        }
+
+        public void PlayGame(GameLevel level)
+        {
+            try
+            {
+                List<Product> allProducts = _dataService.LoadProducts();
+                level.Initialize(allProducts);
+                int score = level.Play();
+                _scoreManager.SaveScore(score);
+                
+                Console.WriteLine($"\nKết thúc level! Điểm của bạn: {score}");
+                Console.WriteLine("\nNhấn Enter để tiếp tục...");
+                Console.ReadLine();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Lỗi trong quá trình chơi game: {ex.Message}");
+                Console.WriteLine("\nNhấn Enter để tiếp tục...");
+                Console.ReadLine();
+            }
+        }
+    }
+}
+
+// Services/IScoreManager.cs
+using System.Collections.Generic;
+
+namespace PriceGuessingGame.Services
+{
+    public interface IScoreManager
+    {
+        void SaveScore(int score);
+        List<int> GetHighScores();
+        void ClearScores();
+    }
+}
+
+// Services/ScoreManager.cs
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Xml.Serialization;
+
+namespace PriceGuessingGame.Services
+{
+    public class ScoreManager : IScoreManager
+    {
+        private List<int> _highScores;
+        private readonly string _scoreFilePath = "highscores.xml";
+        private const int MaxHighScores = 5;
+
+        public ScoreManager()
+        {
+            _highScores = LoadHighScores();
+        }
+
+        public void SaveScore(int score)
+        {
+            _highScores.Add(score);
+            _highScores.Sort();
+            _highScores.Reverse();
+
+            if (_highScores.Count > MaxHighScores)
+            {
+                _highScores = _highScores.GetRange(0, MaxHighScores);
+            }
+
+            SaveHighScores();
+        }
+
+        public List<int> GetHighScores()
+        {
+            return new List<int>(_highScores);
+        }
+
+        public void ClearScores()
+        {
+            _highScores.Clear();
+            SaveHighScores();
+        }
+
+        private List<int> LoadHighScores()
+        {
+            if (!File.Exists(_scoreFilePath))
+            {
+                return new List<int>();
+            }
+
+            try
+            {
+                XmlSerializer serializer = new XmlSerializer(typeof(List<int>));
+                using (FileStream fs = new FileStream(_scoreFilePath, FileMode.Open))
+                {
+                    return (List<int>)serializer.Deserialize(fs);
+                }
+            }
+            catch (Exception)
+            {
+                return new List<int>();
+            }
+        }
+
+        private void SaveHighScores()
+        {
+            try
+            {
+                XmlSerializer serializer = new XmlSerializer(typeof(List<int>));
+                using (FileStream fs = new FileStream(_scoreFilePath, FileMode.Create))
+                {
+                    serializer.Serialize(fs, _highScores);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Lỗi khi lưu điểm cao: {ex.Message}");
+            }
+        }
+    }
+}
+
+// Models/Player.cs
+using System;
+
+namespace PriceGuessingGame.Models
+{
+    [Serializable]
+    public class Player
+    {
+        private string _name;
+        private int _totalScore;
+        private int _gamesPlayed;
+
+        public string Name 
+        { 
+            get { return _name; }
+            set { _name = value; }
+        }
+
+        public int TotalScore
+        {
+            get { return _totalScore; }
+            set { _totalScore = value; }
+        }
+
+        public int GamesPlayed
+        {
+            get { return _gamesPlayed; }
+            set { _gamesPlayed = value; }
+        }
+
+        public double AverageScore
+        {
+            get { return _gamesPlayed > 0 ? (double)_totalScore / _gamesPlayed : 0; }
+        }
+
+        public Player(string name)
+        {
+            _name = name;
+            _totalScore = 0;
+            _gamesPlayed = 0;
+        }
+
+        public void AddScore(int score)
+        {
+            _totalScore += score;
+            _gamesPlayed++;
+        }
+    }
+}
+
+// Services/IPlayerManager.cs
+using PriceGuessingGame.Models;
+
+namespace PriceGuessingGame.Services
+{
+    public interface IPlayerManager
+    {
+        Player GetCurrentPlayer();
+        void SavePlayer(Player player);
+    }
+}
+
+// Services/PlayerManager.cs
+using System;
+using System.IO;
+using System.Xml.Serialization;
+using PriceGuessingGame.Models;
+
+namespace PriceGuessingGame.Services
+{
+    public class PlayerManager : IPlayerManager
+    {
+        private readonly string _playerFilePath = "player.xml";
+        private Player _currentPlayer;
+
+        public PlayerManager()
+        {
+            LoadPlayer();
+        }
+
+        public Player GetCurrentPlayer()
+        {
+            return _currentPlayer;
+        }
+
+        public void SavePlayer(Player player)
+        {
+            _currentPlayer = player;
+            try
+            {
+                XmlSerializer serializer = new XmlSerializer(typeof(Player));
+                using (FileStream fs = new FileStream(_playerFilePath, FileMode.Create))
+                {
+                    serializer.Serialize(fs, player);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Lỗi khi lưu thông tin người chơi: {ex.Message}");
+            }
+        }
+
+        private void LoadPlayer()
+        {
+            if (!File.Exists(_playerFilePath))
+            {
+                CreateNewPlayer();
+                return;
+            }
+
+            try
+            {
+                XmlSerializer serializer = new XmlSerializer(typeof(Player));
+                using (FileStream fs = new FileStream(_playerFilePath, FileMode.Open))
+                {
+                    _currentPlayer = (Player)serializer.Deserialize(fs);
+                }
+            }
+            catch (Exception)
+            {
+                CreateNewPlayer();
+            }
+        }
+
+        private void CreateNewPlayer()
+        {
+            Console.Clear();
+            Console.WriteLine("=== CHÀO MỪNG ĐẾN VỚI HÃY CHỌN GIÁ ĐÚNG ===");
+            Console.Write("\nNhập tên của bạn: ");
+            string playerName = Console.ReadLine().Trim();
+            
+            while (string.IsNullOrEmpty(playerName))
+            {
+                Console.Write("Tên không được để trống. Vui lòng nhập lại: ");
+                playerName = Console.ReadLine().Trim();
+            }
+
+            _currentPlayer = new Player(playerName);
+            SavePlayer(_currentPlayer);
+        }
+    }
+}
+
+// Managers/GameManager.cs
+using System;
+using PriceGuessingGame.Models;
+using PriceGuessingGame.Services;
+
+namespace PriceGuessingGame.Managers
+{
+    public class GameManager
+    {
+        private readonly IGameService _gameService;
+        private readonly IScoreManager _scoreManager;
+        private readonly IPlayerManager _playerManager;
+        private readonly Player _currentPlayer;
+
+        public GameManager()
+        {
+            IDataService dataService = new FileDataService();
+            _scoreManager = new ScoreManager();
+            _playerManager = new PlayerManager();
+            _gameService = new GameService(dataService, _scoreManager);
+            _currentPlayer = _playerManager.GetCurrentPlayer();
+        }
+
+        public void StartGame()
+        {
+            while (true)
+            {
+                ShowMenu();
+                string choice = Console.ReadLine();
+
+                switch (choice)
+                {
+                    case "1":
+                        _gameService.PlayGame(new EasyLevel());
+                        break;
+                    case "2":
+                        _gameService.PlayGame(new MediumLevel());
+                        break;
+                    case "3":
+                        _gameService.PlayGame(new HardLevel());
+                        break;
+                    case "4":
+                        ShowHighScores();
+                        break;
+                    case "5":
+                        ShowPlayerStats();
+                        break;
+                    case "6":
+                        if (ConfirmExit())
+                            return;
+                        break;
+                    default:
+                        Console.WriteLine("\nLựa chọn không hợp lệ!");
+                        Console.WriteLine("Nhấn Enter để tiếp tục...");
+                        Console.ReadLine();
+                        break;
+                }
+            }
+        }
+
+        private void ShowMenu()
+        {
+            Console.Clear();
+            Console.WriteLine($"=== HÃY CHỌN GIÁ ĐÚNG ===");
+            Console.WriteLine($"Xin chào, {_currentPlayer.Name}!\n");
+            Console.WriteLine("1. Chơi mức Dễ (3 sản phẩm)");
+            Console.WriteLine("2. Chơi mức Vừa (5 sản phẩm)");
+            Console.WriteLine("3. Chơi mức Khó (8 sản phẩm)");
+            Console.WriteLine("4. Xem điểm cao");
+            Console.WriteLine("5. Xem thống kê");
+            Console.WriteLine("6. Thoát");
+            Console.Write("\nNhập lựa chọn của bạn: ");
+        }
+
+        private void ShowHighScores()
+        {
+            Console.Clear();
+            Console.WriteLine("=== BẢNG XẾP HẠNG ĐIỂM CAO ===\n");
+            List<int> highScores = _scoreManager.GetHighScores();
+            
+            if (highScores.Count == 0)
+            {
+                Console.WriteLine("Chưa có điểm cao nào!");
+            }
+            else
+            {
+                for (int i = 0; i < highScores.Count; i++)
+                {
+                    Console.WriteLine($"{i + 1}. {highScores[i]} điểm");
+                }
+            }
+
+            Console.WriteLine("\nNhấn Enter để tiếp tục...");
+            Console.ReadLine();
+        }
+
+        private void ShowPlayerStats()
+        {
+            Console.Clear();
+            Console.WriteLine($"=== THỐNG KÊ NGƯỜI CHƠI ===\n");
+            Console.WriteLine($"Tên người chơi: {_currentPlayer.Name}");
+            Console.WriteLine($"Số lần chơi: {_currentPlayer.GamesPlayed}");
+            Console.WriteLine($"Tổng điểm: {_currentPlayer.TotalScore}");
+            Console.WriteLine($"Điểm trung bình: {_currentPlayer.AverageScore:F2}");
+            
+            Console.WriteLine("\nNhấn Enter để tiếp tục...");
+            Console.ReadLine();
+        }
+
+        private bool ConfirmExit()
+        {
+            Console.Clear();
+            Console.Write("Bạn có chắc muốn thoát game? (Y/N): ");
+            string response = Console.ReadLine().Trim().ToUpper();
+            return response == "Y";
+        }
+    }
+}
